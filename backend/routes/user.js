@@ -85,15 +85,24 @@ router.post('/buy', authMiddleware, async (req, res) => {
       return res.status(404).send('User not found.');
     }
 
-    if (user.balance < amount * price) {
-      return res.status(400).send('Insufficient balance.');
+    const totalCost = amount * price;
+
+    let actualAmountBought = amount;
+    if (user.balance < totalCost) {
+      // Calculate the fractional amount that can be bought with the available balance
+      actualAmountBought = user.balance / price;
     }
 
-    // Update balance and add to statements
-    user.balance -= amount * price;
-    user.statements.push(`Bought ${amount} of ${selectedCrypto} for ${amount * price} USD`);
+    const finalCost = actualAmountBought * price;
+
+    // Update user balance and add transaction to statements
+    user.balance -= finalCost;
+    user.statements.push(
+      `Bought ${actualAmountBought.toFixed(6)} of ${selectedCrypto} for ${finalCost.toFixed(2)} USD`
+    );
     await user.save();
-    res.send('Purchase successful');
+
+    res.send(`Purchase successful. Bought ${actualAmountBought.toFixed(6)} of ${selectedCrypto}.`);
   } catch (error) {
     console.error('Error buying cryptocurrency:', error);
     res.status(500).send('Server error. Please try again.');
@@ -110,15 +119,21 @@ router.post('/sell', authMiddleware, async (req, res) => {
       return res.status(404).send('User not found.');
     }
 
-    // Update balance and add to statements
-    user.balance += amount * price;
-    user.statements.push(`Sold ${amount} of ${selectedCrypto} for ${amount * price} USD`);
+    const totalValue = amount * price;
+
+    // Update user balance and add transaction to statements
+    user.balance += totalValue;
+    user.statements.push(
+      `Sold ${amount.toFixed(6)} of ${selectedCrypto} for ${totalValue.toFixed(2)} USD`
+    );
     await user.save();
-    res.send('Sell successful');
+
+    res.send(`Sell successful. Sold ${amount.toFixed(6)} of ${selectedCrypto}.`);
   } catch (error) {
     console.error('Error selling cryptocurrency:', error);
     res.status(500).send('Server error. Please try again.');
   }
 });
+
 
 module.exports = router;
