@@ -1,3 +1,4 @@
+// src/components/CryptoPage.js
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Line } from "react-chartjs-2";
@@ -40,12 +41,7 @@ const RiskMeter = ({ score }) => {
   return (
     <div style={{ position: "relative", width: "250px", height: "140px", margin: "0 auto" }}>
       <svg viewBox="0 0 200 100" style={{ width: "100%" }}>
-        <path
-          d="M10,100 Q100,-50 190,100"
-          fill="none"
-          stroke="#aaa"
-          strokeWidth="10"
-        />
+        <path d="M10,100 Q100,-50 190,100" fill="none" stroke="#aaa" strokeWidth="10" />
         <path
           d="M10,100 Q100,-50 190,100"
           fill="none"
@@ -68,8 +64,8 @@ const RiskMeter = ({ score }) => {
         Risk Score: {score}
       </div>
       <p style={{ textAlign: "center", color: "#f5c518", marginTop: "10px" }}>
-        The risk score is based on the volatility of the coin over the last 30 days. A score of {score}
-        indicates {score > 7 ? "high risk" : score > 4 ? "moderate risk" : "low risk"}.
+        The risk score is based on the volatility of the coin over the last 30 days. A score of {score} indicates{" "}
+        {score > 7 ? "high risk" : score > 4 ? "moderate risk" : "low risk"}.
       </p>
     </div>
   );
@@ -85,21 +81,56 @@ const CryptoPage = () => {
   const [buyAmount, setBuyAmount] = useState("");
   const [sellAmount, setSellAmount] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
-  const handleBuy = () => {
+  const handleBuy = async () => {
     if (!buyAmount || buyAmount <= 0) {
       setErrorMessage("Enter a valid amount to buy.");
       return;
     }
-    alert(`You bought ${buyAmount} of ${selectedCrypto}!`);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        "http://127.0.0.1:5000/api/users/buy",
+        {
+          amount: buyAmount,
+          selectedCrypto,
+          price: realTimePrice,
+        },
+        {
+          headers: { "x-auth-token": token },
+        }
+      );
+      setSuccessMessage(response.data);
+      fetchAccountInfo(); // Refresh account details
+    } catch (error) {
+      setErrorMessage(error.response.data);
+    }
   };
 
-  const handleSell = () => {
+  const handleSell = async () => {
     if (!sellAmount || sellAmount <= 0) {
       setErrorMessage("Enter a valid amount to sell.");
       return;
     }
-    alert(`You sold ${sellAmount} of ${selectedCrypto}!`);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        "http://127.0.0.1:5000/api/users/sell",
+        {
+          amount: sellAmount,
+          selectedCrypto,
+          price: realTimePrice,
+        },
+        {
+          headers: { "x-auth-token": token },
+        }
+      );
+      setSuccessMessage(response.data);
+      fetchAccountInfo(); // Refresh account details
+    } catch (error) {
+      setErrorMessage(error.response.data);
+    }
   };
 
   const fetchRealTimePrice = async () => {
@@ -127,23 +158,7 @@ const CryptoPage = () => {
       const response = await axios.get(
         `http://127.0.0.1:8000/crypto/historical/${selectedCrypto}?timeframe=${historicalScale}`
       );
-      const filteredData = response.data.filter((entry) => {
-        const now = new Date();
-        const timestamp = new Date(entry.timestamp);
-        switch (historicalScale) {
-          case "1y":
-            return timestamp >= new Date(now.setFullYear(now.getFullYear() - 1));
-          case "6m":
-            return timestamp >= new Date(now.setMonth(now.getMonth() - 6));
-          case "3m":
-            return timestamp >= new Date(now.setMonth(now.getMonth() - 3));
-          case "1m":
-            return timestamp >= new Date(now.setMonth(now.getMonth() - 1));
-          default:
-            return true;
-        }
-      });
-      setHistoricalData(filteredData);
+      setHistoricalData(response.data);
     } catch (error) {
       console.error("Error fetching historical data:", error);
       setErrorMessage("Failed to fetch historical data.");
@@ -236,10 +251,9 @@ const CryptoPage = () => {
       }}
     >
       <Navbar /> {/* Add Navbar component */}
-      <h1 style={{ textAlign: "center", fontSize: "2.5rem", marginBottom: "40px" }}>
-        Crypto Dashboard
-      </h1>
+      <h1 style={{ textAlign: "center", fontSize: "2.5rem", marginBottom: "40px" }}>Crypto Dashboard</h1>
       {errorMessage && <p style={{ color: "red", textAlign: "center", marginBottom: "20px" }}>{errorMessage}</p>}
+      {successMessage && <p style={{ color: "green", textAlign: "center", marginBottom: "20px" }}>{successMessage}</p>}
 
       <div
         style={{
@@ -380,8 +394,7 @@ const CryptoPage = () => {
               onChange={(e) => setSellAmount(e.target.value)}
               style={{
                 padding: "15px",
-                borderRadius: "5px",
-                border: "1px solid #d4af37",
+                borderRadius: "5px", border: "1px solid #d4af37",
                 backgroundColor: "#333",
                 color: "#d4af37",
                 fontSize: "1.1rem",
@@ -410,3 +423,4 @@ const CryptoPage = () => {
 };
 
 export default CryptoPage;
+

@@ -1,38 +1,75 @@
 // src/components/AccountPage.js
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Navbar from "./Navbar";
+import axios from "axios";
 
 const AccountPage = () => {
+  const [userData, setUserData] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    // Fetch user account info
+    const fetchAccountInfo = async () => {
+      try {
+        const token = localStorage.getItem("token"); // Assuming token is stored in localStorage
+        const response = await axios.get("http://127.0.0.1:5000/api/users/account", {
+          headers: {
+            "x-auth-token": token,
+          },
+        });
+        setUserData(response.data);
+      } catch (error) {
+        setErrorMessage("Failed to load account information. Please try again.");
+      }
+    };
+    fetchAccountInfo();
+  }, []);
+
   return (
     <div>
       <Navbar />
       <div className="container mt-4">
         <h1>My Account</h1>
-        <div className="card mb-4">
-          <div className="card-body">
-            <h5 className="card-title">Balance</h5>
-            <p className="card-text">$5,000.00</p>
-          </div>
-        </div>
-        <div className="card mb-4">
-          <div className="card-body">
-            <h5 className="card-title">Credit Score</h5>
-            <p className="card-text">750</p>
-          </div>
-        </div>
-        <div className="card mb-4">
-          <div className="card-body">
-            <h5 className="card-title">Statements</h5>
-            <p className="card-text">Recent transactions and statements go here.</p>
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-body">
-            <h5 className="card-title">Contact Info</h5>
-            <p className="card-text">Email: user@example.com</p>
-            <p className="card-text">Phone: (123) 456-7890</p>
-          </div>
-        </div>
+        {errorMessage && <p className="text-danger">{errorMessage}</p>}
+        {userData ? (
+          <>
+            <div className="card mb-4">
+              <div className="card-body">
+                <h5 className="card-title">Balance</h5>
+                <p className="card-text">{`${userData.currency} ${userData.balance.toFixed(2)}`}</p>
+              </div>
+            </div>
+            <div className="card mb-4">
+              <div className="card-body">
+                <h5 className="card-title">Credit Score</h5>
+                <p className="card-text">{userData.creditScore}</p>
+              </div>
+            </div>
+            <div className="card mb-4">
+              <div className="card-body">
+                <h5 className="card-title">Statements</h5>
+                {userData.statements.length > 0 ? (
+                  <ul>
+                    {userData.statements.map((statement, index) => (
+                      <li key={index}>{statement}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="card-text">No recent transactions or statements available.</p>
+                )}
+              </div>
+            </div>
+            <div className="card">
+              <div className="card-body">
+                <h5 className="card-title">Contact Info</h5>
+                <p className="card-text">Email: {userData.email}</p>
+                <p className="card-text">Phone: {userData.phone}</p>
+              </div>
+            </div>
+          </>
+        ) : (
+          <p>Loading account information...</p>
+        )}
       </div>
     </div>
   );
