@@ -2,6 +2,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import logo from "../assets/HERMES.png";
 
 const Navbar = () => {
   return (
@@ -14,16 +15,26 @@ const Navbar = () => {
         fontFamily: "'Poppins', sans-serif",
       }}
     >
-      <div className="container-fluid">
-        <Link
-          className="navbar-brand"
-          to="/account"
+     <div className="container-fluid">
+      <Link
+        className="navbar-brand d-flex align-items-center"
+        to="/account"
+        style={{
+          color: "#d4af37",
+          fontSize: "1.5rem",
+          fontWeight: "bold",
+        }}
+      >
+        {/* Use the imported image */}
+        <img
+          src={logo} // Reference the imported image
+          alt="HERMES Logo"
           style={{
-            color: "#d4af37",
-            fontSize: "1.5rem",
-            fontWeight: "bold",
+            height: "80px", // Adjust the height to your preference
+            width: "auto", // Maintain aspect ratio
+            marginRight: "10px", // Add spacing between logo and text (optional)
           }}
-        >
+        />
           HERMES
         </Link>
         <button
@@ -34,9 +45,9 @@ const Navbar = () => {
           aria-controls="navbarNav"
           aria-expanded="false"
           aria-label="Toggle navigation"
-          style={{ borderColor: "#d4af37" }}
+          style={{ borderColor: "#ffffff" }}
         >
-          <span className="navbar-toggler-icon" style={{ color: "#d4af37" }}></span>
+          <span className="navbar-toggler-icon" style={{ color: "#ffffff" }}></span>
         </button>
         <div className="collapse navbar-collapse" id="navbarNav">
           <ul className="navbar-nav ms-auto">
@@ -45,7 +56,7 @@ const Navbar = () => {
                 className="nav-link"
                 to="/account"
                 style={{
-                  color: "#f5c518",
+                  color: "#ffffff",
                   padding: "10px",
                   transition: "color 0.3s ease",
                 }}
@@ -58,7 +69,7 @@ const Navbar = () => {
                 className="nav-link"
                 to="/crypto"
                 style={{
-                  color: "#f5c518",
+                  color: "#ffffff",
                   padding: "10px",
                   transition: "color 0.3s ease",
                 }}

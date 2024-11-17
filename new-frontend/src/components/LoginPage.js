@@ -6,7 +6,7 @@ import "../styles/LoginPage.css";
 import logo from "../assets/HERMES.png"; // Import the logo
 
 const LoginPage = () => {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const navigate = useNavigate();
@@ -14,19 +14,23 @@ const LoginPage = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
-      if (username && password) {
-        const response = await axios.post("http://127.0.0.1:5000/api/users/login", {
-          email: username,
-          password: password,
+      if (email && password) {
+        const response = await axios.post("/api/users/login", {
+          email,
+          password,
         });
         localStorage.setItem("token", response.data.token); // Save JWT token
-        alert(`Welcome, ${username}!`);
+        alert(`Welcome, ${email}!`);
         navigate("/account"); // Redirect to the account page
       } else {
-        setErrorMessage("Please enter both username and password.");
+        setErrorMessage("Please enter both email and password.");
       }
     } catch (error) {
-      setErrorMessage("Invalid username or password. Please try again.");
+      if (error.response && error.response.status === 400) {
+        setErrorMessage(error.response.data);
+      } else {
+        setErrorMessage("An unexpected error occurred. Please try again.");
+      }
     }
   };
 
@@ -45,13 +49,13 @@ const LoginPage = () => {
           <p>Online & Mobile Security</p>
           {errorMessage && <p className="text-danger">{errorMessage}</p>}
           <div className="form-group">
-            <label htmlFor="username">Username</label>
+            <label htmlFor="email">Email Address</label>
             <input
-              type="text"
-              id="username"
-              placeholder="Enter your username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              type="email"
+              id="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value.trim())} // Trim any trailing spaces
             />
           </div>
           <div className="form-group">
@@ -66,15 +70,15 @@ const LoginPage = () => {
           </div>
           <div className="form-options">
             <label>
-              <input type="checkbox" /> Save username
+              <input type="checkbox" /> Save email
             </label>
           </div>
           <button type="submit" className="btn-login">
             Sign On
           </button>
           <div className="extra-links">
-            <a href="#forgot-password">Forgot Password/Username?</a>
-            <a href="#enroll">New to HERMES®?</a>
+            <a href="#forgot-password">Forgot Password?</a>
+            <a href="/register">New to HERMES®?</a>
           </div>
         </form>
       </div>

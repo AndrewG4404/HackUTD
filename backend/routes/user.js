@@ -6,37 +6,58 @@ const router = express.Router();
 const authMiddleware = require('../middleware/auth');
 require('dotenv').config();
 
-// Register route
+// Explicitly handle CORS preflight requests
+router.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-auth-token');
+  res.sendStatus(200);
+});
+
+// Register route with enhanced logging
 router.post('/register', async (req, res) => {
   const { name, email, password, phone } = req.body;
 
   try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({ name, email, password: hashedPassword, phone });
+    console.log(`Attempting to register user with email: ${email}`);
+
+    // Create new user (password will be hashed by pre-save hook)
+    const user = new User({ name, email, password, phone });
     await user.save();
+
+    console.log(`User registered successfully with email: ${email}`);
     res.status(201).send('User registered successfully');
   } catch (error) {
-    console.error(error);
-    res.status(400).send('Error registering user');
+    console.error('Error registering user:', error);
+    res.status(500).send('Error registering user. Please try again.');
   }
 });
 
-// Login route
+// Login route with improved password comparison logic
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
+    console.log(`Attempting to find user with email: ${email}`);
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).send('Invalid credentials');
+    if (!user) {
+      console.error('User not found with provided email.');
+      return res.status(400).send('Invalid email or password.');
+    }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).send('Invalid credentials');
+    // Use the comparePassword method from the User model
+    console.log(`Comparing password for user: ${user.email}`);
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      console.error('Password does not match.');
+      return res.status(400).send('Invalid email or password.');
+    }
 
+    console.log(`Generating token for user: ${user.email}`);
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
     res.json({ token });
   } catch (error) {
-    console.error(error);
-    res.status(400).send('Error logging in');
+    console.error('Error logging in:', error);
+    res.status(500).send('Error logging in. Please try again.');
   }
 });
 
@@ -44,10 +65,13 @@ router.post('/login', async (req, res) => {
 router.get('/account', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select('-password');
+    if (!user) {
+      return res.status(404).send('User not found.');
+    }
     res.json(user);
   } catch (error) {
-    console.error(error);
-    res.status(500).send('Server error');
+    console.error('Error fetching account info:', error);
+    res.status(500).send('Server error. Please try again.');
   }
 });
 
@@ -57,17 +81,22 @@ router.post('/buy', authMiddleware, async (req, res) => {
 
   try {
     const user = await User.findById(req.user.userId);
-    if (user.balance < amount * price) {
-      return res.status(400).send('Insufficient balance');
+    if (!user) {
+      return res.status(404).send('User not found.');
     }
 
+    if (user.balance < amount * price) {
+      return res.status(400).send('Insufficient balance.');
+    }
+
+    // Update balance and add to statements
     user.balance -= amount * price;
     user.statements.push(`Bought ${amount} of ${selectedCrypto} for ${amount * price} USD`);
     await user.save();
     res.send('Purchase successful');
   } catch (error) {
-    console.error(error);
-    res.status(500).send('Server error');
+    console.error('Error buying cryptocurrency:', error);
+    res.status(500).send('Server error. Please try again.');
   }
 });
 
@@ -77,14 +106,18 @@ router.post('/sell', authMiddleware, async (req, res) => {
 
   try {
     const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).send('User not found.');
+    }
 
+    // Update balance and add to statements
     user.balance += amount * price;
     user.statements.push(`Sold ${amount} of ${selectedCrypto} for ${amount * price} USD`);
     await user.save();
     res.send('Sell successful');
   } catch (error) {
-    console.error(error);
-    res.status(500).send('Server error');
+    console.error('Error selling cryptocurrency:', error);
+    res.status(500).send('Server error. Please try again.');
   }
 });
 

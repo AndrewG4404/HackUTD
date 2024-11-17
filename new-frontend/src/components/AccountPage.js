@@ -12,11 +12,11 @@ const AccountPage = () => {
     const fetchAccountInfo = async () => {
       try {
         const token = localStorage.getItem("token"); // Assuming token is stored in localStorage
-        const response = await axios.get("http://127.0.0.1:5000/api/users/account", {
+        const response = await axios.get("/api/users/account", {
           headers: {
             "x-auth-token": token,
           },
-        });
+        });        
         setUserData(response.data);
       } catch (error) {
         setErrorMessage("Failed to load account information. Please try again.");
