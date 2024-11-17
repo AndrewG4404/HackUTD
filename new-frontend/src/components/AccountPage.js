@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import Navbar from "./Navbar";
 import axios from "axios";
+import "../styles/AccountPage.css"; // Importing the CSS file
 
 const AccountPage = () => {
   const [userData, setUserData] = useState(null);
@@ -16,7 +17,7 @@ const AccountPage = () => {
           headers: {
             "x-auth-token": token,
           },
-        });        
+        });
         setUserData(response.data);
       } catch (error) {
         setErrorMessage("Failed to load account information. Please try again.");

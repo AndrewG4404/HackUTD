@@ -68,8 +68,8 @@ const RiskMeter = ({ score }) => {
  Risk Score: {score}
  </div>
  <p style={{ textAlign: "center", color: "#f5c518", marginTop: "10px" }}>
- The risk score is based on the volatility of the coin over the last 30 days. A score of {score}
- indicates {score > 7 ? "high risk" : score > 4 ? "moderate risk" : "low risk"}.
+ AI Powered Risk meter that trains on the data of the last year. 1 is secure, 10 is risky. A score of {score}
+ indicates {score > 7 ? " high risk" : score > 4 ? " moderate risk" : " low risk"}.
  </p>
  </div>
  );

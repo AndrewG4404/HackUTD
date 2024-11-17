@@ -9,7 +9,7 @@ const Navbar = () => {
     <nav
       className="navbar navbar-expand-lg"
       style={{
-        backgroundColor: "#2a2b2d",
+        backgroundColor: "#ffff",
         color: "#d4af37",
         padding: "10px 20px",
         fontFamily: "'Poppins', sans-serif",
