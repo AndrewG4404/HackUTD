@@ -13,7 +13,7 @@ class BlockchainService:
         self.web3 = Web3(Web3.HTTPProvider(rpc_url))
         if not self.web3.is_connected():
             raise ConnectionError("Failed to connect to the blockchain.")
-        
+
         print(f"Connected to blockchain at {rpc_url}")
 
         self.contract = None
@@ -85,3 +85,13 @@ class BlockchainService:
             return "Failed"
         except Exception as e:
             raise ValueError(f"Failed to fetch transaction status: {e}")
+
+    def estimate_gas_fees(self):
+        """
+        Estimate current gas fees.
+        """
+        try:
+            gas_price = self.web3.eth.gas_price
+            return self.web3.from_wei(gas_price, 'gwei')
+        except Exception as e:
+            raise ValueError(f"Failed to estimate gas fees: {e}")

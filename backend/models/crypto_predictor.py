@@ -10,7 +10,6 @@ import time
 from torch.utils.data import DataLoader, TensorDataset
 from typing import Union
 
-
 # Define the LSTM Model
 class LSTMModel(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, output_size):
@@ -26,7 +25,6 @@ class LSTMModel(nn.Module):
         out, _ = self.lstm(x, (h0, c0))
         out = self.fc(out[:, -1, :])
         return out
-
 
 # Fetch Historical Data with Retry Logic
 def fetch_crypto_data(coin: str, vs_currency: str = 'usd', days: int = 90):
@@ -51,7 +49,6 @@ def fetch_crypto_data(coin: str, vs_currency: str = 'usd', days: int = 90):
             time.sleep(5)
     raise Exception("Failed to fetch data after multiple attempts.")
 
-
 # Prepare Data for LSTM
 def prepare_data(data: pd.DataFrame, look_back: int = 60):
     """
@@ -59,7 +56,7 @@ def prepare_data(data: pd.DataFrame, look_back: int = 60):
     """
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaled_data = scaler.fit_transform(data['price'].values.reshape(-1, 1))
-    
+
     X, y = [], []
     for i in range(look_back, len(scaled_data)):
         X.append(scaled_data[i - look_back:i, 0])
@@ -67,9 +64,8 @@ def prepare_data(data: pd.DataFrame, look_back: int = 60):
 
     X = np.array(X)
     y = np.array(y)
-    
-    return torch.tensor(X, dtype=torch.float32), torch.tensor(y, dtype=torch.float32), scaler
 
+    return torch.tensor(X, dtype=torch.float32), torch.tensor(y, dtype=torch.float32), scaler
 
 # Train Model with DataLoader
 def train_model(coin: str, days: int = 90, epochs: int = 10, batch_size: int = 32):
@@ -101,7 +97,7 @@ def train_model(coin: str, days: int = 90, epochs: int = 10, batch_size: int = 3
         for batch_X, batch_y in train_loader:
             outputs = model(batch_X)
             loss = criterion(outputs, batch_y.unsqueeze(1))
-            
+
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -111,7 +107,6 @@ def train_model(coin: str, days: int = 90, epochs: int = 10, batch_size: int = 3
             print(f"Epoch [{epoch + 1}/{epochs}], Loss: {epoch_loss:.4f}")
 
     return model, scaler, data
-
 
 # Predict Prices with Explainability
 def predict_prices_with_explainability(model, scaler, data: pd.DataFrame, future_days: int = 365):
@@ -126,21 +121,20 @@ def predict_prices_with_explainability(model, scaler, data: pd.DataFrame, future
 
     model.eval()
     predictions = []
-    explanations = []
 
-    explainer = shap.DeepExplainer(model, input_seq)
-    print("Initialized SHAP explainer.")
+    # Replace DeepExplainer with KernelExplainer
+    def model_predict(x):
+        tensor_x = torch.tensor(x, dtype=torch.float32).unsqueeze(0)
+        return model(tensor_x).detach().numpy()
+
+    explainer = shap.KernelExplainer(model_predict, input_seq.numpy())
 
     for _ in range(future_days):
         with torch.no_grad():
             pred = model(input_seq).item()
             predictions.append(pred)
 
-        shap_values = explainer.shap_values(input_seq)
-        explanations.append(shap_values[0].tolist())
-
-        new_input = torch.tensor([[pred]], dtype=torch.float32)
-        input_seq = torch.cat((input_seq[:, 1:, :], new_input.unsqueeze(0)), dim=1)
+        input_seq = torch.cat((input_seq[:, 1:, :], torch.tensor([[pred]], dtype=torch.float32).unsqueeze(0)), dim=1)
 
     predicted_prices = scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
     future_dates = [data['timestamp'].iloc[-1] + datetime.timedelta(days=i) for i in range(1, future_days + 1)]
@@ -148,9 +142,23 @@ def predict_prices_with_explainability(model, scaler, data: pd.DataFrame, future
     return pd.DataFrame({
         'date': future_dates,
         'predicted_price': predicted_prices.flatten(),
-        'explanation': explanations
     })
 
+# Calculate Risk Score
+def calculate_risk_score(data: pd.DataFrame):
+    """
+    Calculate a risk score based on the volatility and mean price.
+    """
+    volatility = data['price'].std()
+    mean_price = data['price'].mean()
+    risk_score = min(max((volatility / mean_price) * 10, 1), 10)
+
+    description = (
+        f"The risk score is based on the volatility of the coin over the last 30 days. "
+        f"A score of {round(risk_score, 2)} indicates {'high' if risk_score > 7 else 'low' if risk_score < 4 else 'moderate'} risk. "
+        f"This score is calculated by comparing the standard deviation ({volatility:.2f}) to the mean price ({mean_price:.2f})."
+    )
+    return round(risk_score, 2), description
 
 # Interactive Data Handler for Timeframes
 def get_data_for_timeframe(data: pd.DataFrame, timeframe: str = "1y"):
@@ -169,7 +177,6 @@ def get_data_for_timeframe(data: pd.DataFrame, timeframe: str = "1y"):
     else:
         raise ValueError("Unsupported timeframe. Use '1y', '6m', '3m', or '1m'.")
     return data[data['timestamp'] >= start]
-
 
 # Load Pretrained Model (Optional)
 def load_pretrained_model():

@@ -5,6 +5,7 @@ from backend.models.crypto_predictor import (
     train_model,
     predict_prices_with_explainability,
     load_pretrained_model,
+    calculate_risk_score
 )
 from backend.services.blockchain import BlockchainService
 from backend.services.data_fetcher import DataFetcher
@@ -40,7 +41,6 @@ class CryptoPredictionRequest(BaseModel):
     days: int = 90
     future_days: int = 7
 
-
 @app.post("/crypto/predict_with_explainability")
 def get_predictions_with_explainability(request: CryptoPredictionRequest):
     """
@@ -49,7 +49,7 @@ def get_predictions_with_explainability(request: CryptoPredictionRequest):
     try:
         # Load a pretrained model if training is skipped
         model = load_pretrained_model()
-        
+
         # Train a model if needed
         if not model:
             model, scaler, data = train_model(request.coin, days=request.days, epochs=5)
@@ -65,6 +65,18 @@ def get_predictions_with_explainability(request: CryptoPredictionRequest):
         print(f"Prediction error: {e}")
         raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
 
+@app.get("/crypto/risk_score/{coin}")
+def get_risk_score(coin: str):
+    """
+    Endpoint for calculating risk score based on volatility and trends.
+    """
+    try:
+        data = DataFetcher.fetch_historical_data(coin, "usd", "30d")
+        risk_score, description = calculate_risk_score(data)
+        return {"coin": coin, "risk_score": risk_score, "description": description}
+    except Exception as e:
+        print(f"Risk score error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error calculating risk score: {str(e)}")
 
 @app.get("/wallet/create")
 def create_wallet():
@@ -75,7 +87,6 @@ def create_wallet():
         return blockchain.create_wallet()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error creating wallet: {str(e)}")
-
 
 @app.get("/wallet/balance/{wallet_address}")
 def get_wallet_balance(wallet_address: str):
@@ -90,12 +101,10 @@ def get_wallet_balance(wallet_address: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching wallet balance: {str(e)}")
 
-
 class TransactionRequest(BaseModel):
     private_key: str
     to_address: str
     amount_eth: float
-
 
 @app.post("/transaction/send")
 def send_transaction(request: TransactionRequest):
@@ -110,7 +119,6 @@ def send_transaction(request: TransactionRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error sending transaction: {str(e)}")
 
-
 @app.get("/transaction/status/{tx_hash}")
 def get_transaction_status(tx_hash: str):
     """
@@ -124,7 +132,6 @@ def get_transaction_status(tx_hash: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching transaction status: {str(e)}")
 
-
 @app.get("/crypto/price/{coin}")
 def get_real_time_price(coin: str, vs_currency: str = "usd"):
     """
@@ -133,10 +140,11 @@ def get_real_time_price(coin: str, vs_currency: str = "usd"):
     try:
         return DataFetcher.fetch_real_time_price(coin, vs_currency)
     except HTTPException as e:
+        print(f"HTTP Exception: {e.detail}")
         raise e
     except Exception as e:
+        print(f"Error fetching real-time price: {e}")
         raise HTTPException(status_code=500, detail=f"Error fetching real-time price: {str(e)}")
-
 
 @app.get("/crypto/historical/{coin}")
 def get_historical_data(coin: str, vs_currency: str = "usd", days: int = 90):
@@ -144,8 +152,11 @@ def get_historical_data(coin: str, vs_currency: str = "usd", days: int = 90):
     Endpoint for fetching historical price data for a cryptocurrency.
     """
     try:
-        return DataFetcher.fetch_historical_data(coin, vs_currency, days).to_dict(orient="records")
+        data = DataFetcher.fetch_historical_data(coin, vs_currency, days)
+        return data.to_dict(orient="records")
     except HTTPException as e:
+        print(f"HTTP Exception: {e.detail}")
         raise e
     except Exception as e:
+        print(f"Error fetching historical data: {e}")
         raise HTTPException(status_code=500, detail=f"Error fetching historical data: {str(e)}")
